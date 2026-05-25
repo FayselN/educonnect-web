@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, AlertTriangle, MessageCircle, AlertCircle } from 'lucide-react';
+import { MessageSquare, AlertTriangle, MessageCircle, AlertCircle, Megaphone } from 'lucide-react';
 import { toast } from 'sonner';
 import api from '../api/axios';
 import { usePolling } from '../hooks/usePolling';
@@ -8,6 +8,11 @@ const ContentModeration = () => {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
+  
+  // Broadcast modal state
+  const [showBroadcastModal, setShowBroadcastModal] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastContent, setBroadcastContent] = useState('');
 
   const fetchPosts = async () => {
     try {
@@ -69,6 +74,26 @@ const ContentModeration = () => {
     toast.success('Removed from view');
   };
 
+  const handleBroadcast = async (e) => {
+    e.preventDefault();
+    if (!broadcastTitle.trim() || !broadcastContent.trim()) return;
+
+    try {
+      await api.post('/announcements', {
+        title: broadcastTitle,
+        content: broadcastContent,
+        category: 'general'
+      });
+      toast.success('Announcement broadcasted successfully!');
+      setShowBroadcastModal(false);
+      setBroadcastTitle('');
+      setBroadcastContent('');
+      fetchPosts();
+    } catch (error) {
+      toast.error('Failed to broadcast announcement');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -89,6 +114,13 @@ const ContentModeration = () => {
               <option value="Question">Questions Only</option>
             </select>
           </div>
+          <button
+            onClick={() => setShowBroadcastModal(true)}
+            className="bg-brand hover:bg-brand-dark text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm flex items-center gap-2"
+          >
+            <Megaphone className="w-4 h-4" />
+            Broadcast
+          </button>
         </div>
       </div>
 
@@ -169,6 +201,69 @@ const ContentModeration = () => {
           </div>
         </div>
       </div>
+
+      {/* Broadcast Modal */}
+      {showBroadcastModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[24px] shadow-2xl w-full max-w-md p-6 border border-border relative overflow-hidden">
+            <div className="mb-6 relative z-10">
+              <h2 className="text-xl font-bold text-text-primary flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-brand" />
+                Broadcast Announcement
+              </h2>
+              <p className="text-text-secondary text-sm mt-1">
+                This will be visible to all users across all courses.
+              </p>
+            </div>
+
+            <form onSubmit={handleBroadcast} className="relative z-10">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Title
+                </label>
+                <input
+                  type="text"
+                  value={broadcastTitle}
+                  onChange={(e) => setBroadcastTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-text-primary"
+                  placeholder="Important update..."
+                  required
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-text-primary mb-2">
+                  Message Content
+                </label>
+                <textarea
+                  value={broadcastContent}
+                  onChange={(e) => setBroadcastContent(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-brand/50 text-text-primary min-h-[120px] resize-y"
+                  placeholder="Write your announcement here..."
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowBroadcastModal(false)}
+                  className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-xl font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!broadcastTitle.trim() || !broadcastContent.trim()}
+                  className="flex-1 py-3 px-4 bg-brand hover:bg-brand-dark text-white rounded-xl font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
+                >
+                  Send Broadcast
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
